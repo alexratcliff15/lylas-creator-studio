@@ -2,6 +2,9 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getAuthUser } from '@/lib/getAuthUser';
 
+// Prevent Next.js from caching this route
+export const dynamic = 'force-dynamic';
+
 // GET /api/me — Get current user's full profile
 export async function GET(request) {
   try {
@@ -22,7 +25,7 @@ export async function GET(request) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
-    return NextResponse.json({
+    const res = NextResponse.json({
       id: user.id,
       email: user.email,
       name: user.name,
@@ -31,6 +34,8 @@ export async function GET(request) {
       creatorProfile: user.creatorProfile,
       brandProfile: user.brandProfile,
     });
+    res.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate');
+    return res;
   } catch (error) {
     console.error('GET /api/me error:', error);
     return NextResponse.json({ error: error.message }, { status: 500 });
