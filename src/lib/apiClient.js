@@ -21,6 +21,7 @@ async function apiRequest(url, options = {}) {
   const response = await fetch(url, {
     ...options,
     headers,
+    cache: 'no-store',
   });
 
   if (!response.ok) {
