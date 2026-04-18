@@ -1,0 +1,355 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model User {
+  id              String    @id @default(cuid())
+  email           String    @unique
+  name            String?
+  passwordHash    String?
+  image           String?
+  role            Role      @default(CREATOR)
+  emailVerified   DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  accounts        Account[]
+  sessions        Session[]
+  creatorProfile  CreatorProfile?
+  brandProfile    BrandProfile?
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+enum Role {
+  CREATOR
+  BRAND_ADMIN
+  SUPER_ADMIN
+}
+
+enum CreatorTier {
+  BRONZE
+  SILVER
+  GOLD
+  PLATINUM
+}
+
+model CreatorProfile {
+  id                String       @id @default(cuid())
+  userId            String       @unique
+  user              User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  handle            String       @unique
+  bio               String?      @db.Text
+  avatar            String?
+  tier              CreatorTier  @default(BRONZE)
+  specialties       String[]
+  rating            Float        @default(0)
+  stripeAccountId   String?
+  stripeOnboarded   Boolean      @default(false)
+  totalEarnings     Float        @default(0)
+  totalConversions  Int          @default(0)
+  totalViews        Int          @default(0)
+  avgRoas           Float        @default(0)
+  isApproved        Boolean      @default(false)
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
+
+  videos            Video[]
+  commissions       Commission[]
+  sampleApplications SampleApplication[]
+  targets           CreatorTarget[]
+  feedPosts         FeedPost[]
+  promoCodes        PromoCode[]
+}
+
+model BrandProfile {
+  id                String    @id @default(cuid())
+  userId            String    @unique
+  user              User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  companyName       String
+  metaAdAccountId   String?
+  metaAccessToken   String?   @db.Text
+  metaPixelId       String?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  campaigns         Campaign[]
+  sampleProducts    SampleProduct[]
+}
+
+model Campaign {
+  id              String         @id @default(cuid())
+  brandProfileId  String
+  brandProfile    BrandProfile   @relation(fields: [brandProfileId], references: [id])
+  name            String
+  description     String?        @db.Text
+  status          CampaignStatus @default(DRAFT)
+  budget          Float          @default(0)
+  spent           Float          @default(0)
+  startDate       DateTime?
+  endDate         DateTime?
+  metaCampaignId  String?
+  metaAdSetIds    String[]
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  videos          Video[]
+  promoCodes      PromoCode[]
+}
+
+enum CampaignStatus {
+  DRAFT
+  ACTIVE
+  PAUSED
+  COMPLETED
+  ARCHIVED
+}
+
+model Video {
+  id                String       @id @default(cuid())
+  creatorProfileId  String
+  creatorProfile    CreatorProfile @relation(fields: [creatorProfileId], references: [id])
+  campaignId        String?
+  campaign          Campaign?    @relation(fields: [campaignId], references: [id])
+  title             String
+  description       String?      @db.Text
+  fileUrl           String
+  thumbnailUrl      String?
+  duration          Int?
+  contentType       String?
+  hookLine          String?
+  status            VideoStatus  @default(UPLOADED)
+  metaAdId          String?
+  metaCreativeId    String?
+
+  // Performance metrics synced from Meta
+  views             Int          @default(0)
+  impressions       Int          @default(0)
+  clicks            Int          @default(0)
+  ctr               Float        @default(0)
+  conversions       Int          @default(0)
+  spend             Float        @default(0)
+  revenue           Float        @default(0)
+  roas              Float        @default(0)
+  cpm               Float        @default(0)
+  cpc               Float        @default(0)
+
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
+
+  commissions       Commission[]
+  adMetrics         AdMetric[]
+}
+
+enum VideoStatus {
+  UPLOADED
+  PROCESSING
+  IN_REVIEW
+  APPROVED
+  REJECTED
+  ACTIVE
+  PAUSED
+  SCALING
+}
+
+model AdMetric {
+  id            String   @id @default(cuid())
+  videoId       String
+  video         Video    @relation(fields: [videoId], references: [id])
+  date          DateTime
+  impressions   Int      @default(0)
+  clicks        Int      @default(0)
+  spend         Float    @default(0)
+  conversions   Int      @default(0)
+  revenue       Float    @default(0)
+  roas          Float    @default(0)
+  ctr           Float    @default(0)
+  cpm           Float    @default(0)
+  cpc           Float    @default(0)
+  placement     String?
+  createdAt     DateTime @default(now())
+
+  @@unique([videoId, date, placement])
+}
+
+model PromoCode {
+  id                String          @id @default(cuid())
+  campaignId        String?
+  campaign          Campaign?       @relation(fields: [campaignId], references: [id])
+  creatorProfileId  String?
+  creatorProfile    CreatorProfile? @relation(fields: [creatorProfileId], references: [id])
+  code              String          @unique
+  stripeCouponId    String?
+  stripePromoId     String?
+  discountType      DiscountType    @default(PERCENTAGE)
+  discountValue     Float
+  maxRedemptions    Int?
+  timesRedeemed     Int             @default(0)
+  revenue           Float           @default(0)
+  isActive          Boolean         @default(true)
+  expiresAt         DateTime?
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+
+  attributions      Attribution[]
+
+  @@index([creatorProfileId])
+  @@index([campaignId])
+}
+
+enum DiscountType {
+  PERCENTAGE
+  FIXED_AMOUNT
+}
+
+model Attribution {
+  id              String    @id @default(cuid())
+  promoCodeId     String?
+  promoCode       PromoCode? @relation(fields: [promoCodeId], references: [id])
+  stripePaymentId String    @unique
+  customerId      String?
+  amount          Float
+  creatorCut      Float
+  brandCut        Float
+  source          String?
+  createdAt       DateTime  @default(now())
+}
+
+model Commission {
+  id                String          @id @default(cuid())
+  creatorProfileId  String
+  creatorProfile    CreatorProfile  @relation(fields: [creatorProfileId], references: [id])
+  videoId           String?
+  video             Video?          @relation(fields: [videoId], references: [id])
+  amount            Float
+  conversions       Int             @default(0)
+  rate              Float
+  status            CommissionStatus @default(PENDING)
+  stripeTransferId  String?
+  periodStart       DateTime
+  periodEnd         DateTime
+  paidAt            DateTime?
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+}
+
+enum CommissionStatus {
+  PENDING
+  PROCESSING
+  PAID
+  FAILED
+}
+
+model SampleProduct {
+  id              String    @id @default(cuid())
+  brandProfileId  String
+  brandProfile    BrandProfile @relation(fields: [brandProfileId], references: [id])
+  name            String
+  description     String?   @db.Text
+  category        String
+  value           Float
+  imageUrl        String?
+  brief           String?   @db.Text
+  totalSlots      Int       @default(5)
+  filledSlots     Int       @default(0)
+  deadline        DateTime?
+  isActive        Boolean   @default(true)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  applications    SampleApplication[]
+}
+
+model SampleApplication {
+  id                String             @id @default(cuid())
+  sampleProductId   String
+  sampleProduct     SampleProduct      @relation(fields: [sampleProductId], references: [id])
+  creatorProfileId  String
+  creatorProfile    CreatorProfile     @relation(fields: [creatorProfileId], references: [id])
+  status            ApplicationStatus  @default(PENDING)
+  pitch             String?            @db.Text
+  shippingAddress   String?            @db.Text
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+
+  @@unique([sampleProductId, creatorProfileId])
+}
+
+enum ApplicationStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  SHIPPED
+  RECEIVED
+  CONTENT_SUBMITTED
+}
+
+model CreatorTarget {
+  id                String       @id @default(cuid())
+  creatorProfileId  String
+  creatorProfile    CreatorProfile @relation(fields: [creatorProfileId], references: [id])
+  metric            String
+  currentValue      Float
+  targetValue       Float
+  insight           String?      @db.Text
+  month             DateTime
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
+
+  @@unique([creatorProfileId, metric, month])
+}
+
+model FeedPost {
+  id                String       @id @default(cuid())
+  creatorProfileId  String
+  creatorProfile    CreatorProfile @relation(fields: [creatorProfileId], references: [id])
+  content           String       @db.Text
+  videoTitle        String?
+  roas              Float?
+  views             Int?
+  tags              String[]
+  likes             Int          @default(0)
+  comments          Int          @default(0)
+  saves             Int          @default(0)
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
+}

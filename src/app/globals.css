@@ -1,0 +1,51 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --brand-olive: #5C7A3D;
+  --brand-olive-dark: #3D5A3A;
+  --brand-cream: #F5F7F0;
+  --brand-charcoal: #2A2D26;
+}
+
+body {
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  background-color: #FAFCF7;
+  color: #2A2D26;
+}
+
+@layer utilities {
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+
+  .brand-gradient {
+    background: linear-gradient(135deg, #5C7A3D 0%, #3D5A3A 100%);
+  }
+
+  .brand-text-gradient {
+    background: linear-gradient(135deg, #5C7A3D 0%, #3D5A3A 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+}
+
+@layer components {
+  .btn-primary {
+    @apply px-6 py-3 bg-brand-primary text-white rounded-lg font-semibold hover:shadow-lg transition-all duration-200;
+  }
+
+  .btn-secondary {
+    @apply px-6 py-3 border-2 border-brand-primary text-brand-primary rounded-lg font-semibold hover:bg-brand-cream transition-all duration-200;
+  }
+
+  .card-base {
+    @apply bg-white rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-shadow duration-200;
+  }
+}
