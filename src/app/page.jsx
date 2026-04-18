@@ -14,6 +14,21 @@ export default function LoginPage() {
   const [error, setError] = useState('');
   const [signInRole, setSignInRole] = useState(null);
 
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { Button } from '@/components/ui';
+import { Mail, Lock, Chrome } from 'lucide-react';
+import { useApp } from '@/context/AppContext';
+
+export default function LoginPage() {
+  const router = useRouter();
+  const { setUser } = useApp();
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [signInRole, setSignInRole] = useState(null);
+
   const handleEmailSignIn = async (e) => {
     e.preventDefault();
     setLoading(true);
@@ -52,19 +67,31 @@ export default function LoginPage() {
     }
   };
 
-  const handleDemoLogin = (role) => {
-    const demoUser = {
-      id: 'demo-' + role,
-      email: `${role}@demo.local`,
-      name: role === 'creator' ? 'Alex Creator' : 'Brand Manager',
-      role,
-      tier: role === 'creator' ? 'gold' : null,
-      avatar: null,
-    };
-    localStorage.setItem('token', 'demo-token-' + Date.now());
-    localStorage.setItem('user', JSON.stringify(demoUser));
-    setUser(demoUser);
-    window.location.href = role === 'creator' ? '/dashboard/creator' : '/dashboard/brand';
+  const handleDemoLogin = async (role) => {
+    setSignInRole(role);
+    setLoading(true);
+    setError('');
+
+    try {
+      const res = await fetch('/api/demo-login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ role }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Demo login failed');
+
+      localStorage.setItem('token', data.token);
+      localStorage.setItem('user', JSON.stringify(data.user));
+      setUser(data.user);
+
+      window.location.href = role === 'creator' ? '/dashboard/creator' : '/dashboard/brand';
+    } catch (err) {
+      setError(err.message);
+      setLoading(false);
+      setSignInRole(null);
+    }
   };
 
   return (
@@ -80,7 +107,7 @@ export default function LoginPage() {
         <div className="space-y-6">
           <div className="flex items-start gap-4">
             <div className="w-12 h-12 rounded-lg bg-white/20 flex items-center justify-center flex-shrink-0">
-              <span className="text-2xl">🎬</span>
+              <span className="text-2xl">ð¬</span>
             </div>
             <div>
               <h3 className="font-semibold text-lg mb-1">Create & Monetize</h3>
@@ -90,7 +117,7 @@ export default function LoginPage() {
 
           <div className="flex items-start gap-4">
             <div className="w-12 h-12 rounded-lg bg-white/20 flex items-center justify-center flex-shrink-0">
-              <span className="text-2xl">📊</span>
+              <span className="text-2xl">ð</span>
             </div>
             <div>
               <h3 className="font-semibold text-lg mb-1">Real-Time Analytics</h3>
@@ -100,7 +127,7 @@ export default function LoginPage() {
 
           <div className="flex items-start gap-4">
             <div className="w-12 h-12 rounded-lg bg-white/20 flex items-center justify-center flex-shrink-0">
-              <span className="text-2xl">💰</span>
+              <span className="text-2xl">ð°</span>
             </div>
             <div>
               <h3 className="font-semibold text-lg mb-1">Unlock Rewards</h3>
@@ -109,7 +136,7 @@ export default function LoginPage() {
           </div>
         </div>
 
-        <p className="text-sm opacity-75">© 2024 Lyla's House. All rights reserved.</p>
+        <p className="text-sm opacity-75">Â© 2024 Lyla's House. All rights reserved.</p>
       </div>
 
       {/* Right side - Login Form */}
@@ -154,7 +181,7 @@ export default function LoginPage() {
                   type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder="••••••••"
+                  placeholder="â¢â¢â¢â¢â¢â¢â¢â¢"
                   className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-primary focus:border-transparent"
                   required
                 />
